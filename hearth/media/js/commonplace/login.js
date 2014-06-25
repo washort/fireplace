@@ -81,14 +81,37 @@ define('login',
         } else {
             console.log('Not allowing unverified emails');
         }
-
-        persona_loaded.done(function() {
-            if (capabilities.persona()) {
-                console.log('Requesting login from Persona');
-                navigator.id.request(opt);
-            }
-        });
-
+        if (settings.switches.indexOf('firefox-accounts') != -1) {
+            window.addEventListener("message", function (msg) {
+                if (!msg.data || !msg.data.auth_code) {
+                    return;
+                }
+                var data = {
+                    'auth_response': msg.data.auth_code,
+                    'state': settings.fxa_auth_state
+                };
+                z.page.trigger('before_login');
+                requests.post(urls.api.url('fxa-login'), data).done(function(data) {
+                    user.set_token(data.token, data.settings);
+                    user.update_permissions(data.permissions);
+                    user.update_apps(data.apps);
+                    console.log('Login succeeded, preparing the app');
+                    z.body.addClass('logged-in');
+                    $('.loading-submit').removeClass('loading-submit');
+                    z.page.trigger('reload_chrome').trigger('logged_in');
+                    _.invoke(pending_logins, 'resolve');
+                    pending_logins = [];
+                });
+            }, false);
+            window.open(settings.fxa_auth_url, "fxa");
+        } else {
+            persona_loaded.done(function() {
+                if (capabilities.persona()) {
+                    console.log('Requesting login from Persona');
+                    navigator.id.request(opt);
+                }
+            });
+        }
         return def.promise();
     }
 
