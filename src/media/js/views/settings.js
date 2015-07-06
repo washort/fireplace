@@ -42,6 +42,9 @@ define('views/settings',
             // Cachebust consumer-info since `enable_recommendations` lives
             // there for navbar toggling.
             cache.bust(urls.api.url('consumer_info'));
+            // Also cachebust a version of the url without region= because the
+            // initial call doesn't pass a region param.
+            cache.bust(utils.urlunparam(urls.api.url('consumer_info'), ['region']));
         }).fail(function() {
             notify({message: gettext('Settings could not be saved')});
         });
